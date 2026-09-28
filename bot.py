@@ -20,28 +20,21 @@ def run_flask():
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f"/start from {update.effective_user.id}")
-    await update.message.reply_text(
-        "🌱 The Growth Plugin Bot is LIVE!\n\n"
-        "Send me a channel @username to check\n"
-        "Use /welcome to setup welcome message"
-    )
+    await update.message.reply_text("🌱 The Growth Plugin Bot is LIVE!\n\nSend me a channel @username to check\nUse /welcome to setup welcome message")
 
 async def welcome_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Welcome setup! What is your welcome message? Use /welcome__answer1")
+    await update.message.reply_text("Welcome setup! What is your welcome message?")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     print(f"Message: {text}")
     if "@" in text:
-        await update.message.reply_text(f"✅ Got it: {text}\n\nChecking channel... (full feature coming)")
+        await update.message.reply_text(f"✅ Got it: {text}\n\nChecking channel...")
     else:
         await update.message.reply_text(f"You said: {text}\nSend @channel to check")
 
 if __name__ == "__main__":
-    # Start Flask in background thread
     threading.Thread(target=run_flask, daemon=True).start()
-    
-    # Run bot in MAIN thread (this is the fix!)
     print("Starting Telegram bot polling...")
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
