@@ -15,14 +15,12 @@ async def echo(update, context):
     await update.message.reply_text(f"You said: {update.message.text}")
 
 app = Flask(__name__)
-
 @app.route('/')
 def home():
     return "Bot is running!"
 
 def run_flask():
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
 
 def main():
     threading.Thread(target=run_flask, daemon=True).start()
