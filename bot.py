@@ -6,21 +6,23 @@ import threading
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
 async def start(update, context):
-    await update.message.reply_text("Bot is LIVE! 🚀 Send /welcome")
+    await update.message.reply_text("Bot is LIVE! 🚀")
 
 async def help_cmd(update, context):
-    await update.message.reply_text("Help: Use /start and /welcome")
+    await update.message.reply_text("Use /start")
 
 async def echo(update, context):
     await update.message.reply_text(f"You said: {update.message.text}")
 
 app = Flask(__name__)
+
 @app.route('/')
 def home():
     return "Bot is running!"
 
 def run_flask():
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
 
 def main():
     threading.Thread(target=run_flask, daemon=True).start()
