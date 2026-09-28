@@ -2,35 +2,32 @@ import os
 import threading
 from flask import Flask
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-print(f"Token loaded: {BOT_TOKEN is not None}")
+TOKEN = os.environ.get("BOT_TOKEN") or os.environ.get("TELEGRAM_TOKEN")
+print(f"Token loaded: {bool(TOKEN)}")
 
-flask_app = Flask(__name__)
+app = Flask(__name__)
 
-@flask_app.route('/')
+@app.route('/')
 def home():
-    return "Bot is Alive!", 200
-
-def run_flask():
-    port = int(os.environ.get("PORT", 10000))
-    flask_app.run(host="0.0.0.0", port=port)
+    return "Bot is alive!"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🌱 The Growth Plugin Bot is LIVE!\n\nSend /welcome")
+    await update.message.reply_text("Hello! Bot is LIVE ✅ Send /welcome to test")
 
 async def welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("What is your welcome message?")
+    await update.message.reply_text("Welcome command works! ✅")
 
-async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(f"You sent: {update.message.text}")
-
-if __name__ == "__main__":
-    threading.Thread(target=run_flask, daemon=True).start()
+def run_bot():
     print("Starting Telegram bot polling...")
-    app = Application.builder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("welcome", welcome))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
-    app.run_polling()
+    application = ApplicationBuilder().token(TOKEN).build()
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("welcome", welcome))
+    application.run_polling()
+
+if __name__ == '__main__':
+    threading.Thread(target=run_bot).start()
+    port = int(os.environ.get("PORT", 10000))
+    print(f"Starting Flask on port {port}")
+    app.run(host='0.0.0.0', port=port)
