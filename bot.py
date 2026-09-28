@@ -1,58 +1,45 @@
 import os
-import random
-import logging
 import threading
 from flask import Flask
-from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, MessageHandler, filters
 
-# --- Flask to keep Render happy (binds a port) ---
+# Get token from Render Environment
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+
+# --- Your bot commands here ---
+async def start(update, context):
+    await update.message.reply_text("Hello! Bot is Live! 🚀 Use /help")
+
+async def help_command(update, context):
+    await update.message.reply_text("I am The Growth Plugin Bot! Send me a message.")
+
+async def echo(update, context):
+    await update.message.reply_text(f"You said: {update.message.text}")
+
+# --- Flask for Render port ---
 app = Flask(__name__)
-
 @app.route('/')
 def home():
-    return "Bot is Live!"
+    return "Bot is running!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host='0.0.0.0', port=port)
 
-# --- Telegram Bot Logic ---
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
-
-logging.basicConfig(level=logging.INFO)
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Welcome to The Growth Plugin! 🚀\n\n"
-        "Your journey to better YouTube growth starts here.\n\n"
-        "Send /help to see what I can do."
-    )
-
-async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Available commands:\n"
-        "/start - Start the bot\n"
-        "/help - Show this help\n"
-        "/verify - Get verification code"
-    )
-
-async def verify(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    code = random.randint(100000, 999999)
-    await update.message.reply_text(f"Your verification code is: {code}")
-
+# --- Run bot ---
 def main():
     # Start Flask in background
     threading.Thread(target=run_flask, daemon=True).start()
     
-    # Start Bot
+    # Build bot application (NEW way - no Updater)
     application = Application.builder().token(BOT_TOKEN).build()
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", help_cmd))
-    application.add_handler(CommandHandler("verify", verify))
     
-    print("Bot is polling...")
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
+    
+    print("Bot starting... Flask running too!")
     application.run_polling()
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
