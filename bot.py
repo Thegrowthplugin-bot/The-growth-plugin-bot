@@ -1,38 +1,26 @@
-import requests
-from telegram.ext import *
+import os
+import logging
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-HANDLE, PHONE = range(2)
-TOKEN = "PASTE_TOKEN_HERE"
-TERMII_KEY = "PASTE_TERMII_KEY_HERE"
+TOKEN = os.getenv("TOKEN")
+if not TOKEN:
+    raise ValueError("TOKEN not set")
 
-async def start(update, context):
- await update.message.reply_text("Welcome! Whats your TikTok handle?")
- return HANDLE
+logging.basicConfig(level=logging.INFO)
 
-async def get_handle(update, context):
- context.user_data['h'] = update.message.text
- await update.message.reply_text("Whats your WhatsApp? e.g 08012345678")
- return PHONE
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Hello! I am The Growth Plugin Bot")
 
-async def get_phone(update, context):
- p = update.message.text.strip()
- h = context.user_data['h']
- if p.startswith('0'):
-  p = '234' + p[1:]
- u = "https:" + "//api.ng.termii.com/api/sms/send"
- d = {"to": p, "from": "GrowthPlugin", "sms": f"Hey {h}! Active", "type": "plain", "channel": "generic", "api_key": TERMII_KEY}
- try:
-  requests.post(u, json=d)
- except:
-  pass
- await update.message.reply_text(f"Done {h}! SMS sent!")
- return ConversationHandler.END
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(f"You said: {update.message.text}")
 
 def main():
- app = Application.builder().token(TOKEN).build()
- conv = ConversationHandler(entry_points=[CommandHandler("start", start)], states={HANDLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_handle)], PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_phone)]}, fallbacks=[])
- app.add_handler(conv)
- app.run_polling()
+    print("Bot starting...")
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.run_polling()
 
 if __name__ == "__main__":
- main()
+    main()
