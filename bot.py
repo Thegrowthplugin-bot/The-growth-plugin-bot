@@ -1,85 +1,58 @@
 import os
-import logging
-import requests
-import threading
 import random
+import logging
+import threading
 from flask import Flask
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, CommandHandler, ContextTypes
 
-TOKEN = os.getenv("TOKEN")
-TERMII_KEY = os.getenv("TERMII_KEY")
+# --- Flask to keep Render happy (binds a port) ---
+app = Flask(__name__)
 
-if not TOKEN:
-    raise ValueError("TOKEN not set")
-if not TERMII_KEY:
-    raise ValueError("TERMII_KEY not set")
-
-logging.basicConfig(level=logging.INFO)
-user_codes = {}
-
-flask_app = Flask(__name__)
-@flask_app.route('/')
+@app.route('/')
 def home():
-    return "Bot is running!"
+    return "Bot is Live!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 10000))
-    flask_app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port)
+
+# --- Telegram Bot Logic ---
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+
+logging.basicConfig(level=logging.INFO)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Welcome to The Growth Plugin! 👋\n\nPlease send your phone number with country code.\nExample: +2348012345678")
+    await update.message.reply_text(
+        "Welcome to The Growth Plugin! 🚀\n\n"
+        "Your journey to better YouTube growth starts here.\n\n"
+        "Send /help to see what I can do."
+    )
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text.strip()
-    chat_id = update.effective_chat.id
+async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "Available commands:\n"
+        "/start - Start the bot\n"
+        "/help - Show this help\n"
+        "/verify - Get verification code"
+    )
 
-    # If user is trying to verify code
-    if chat_id in user_codes:
-        saved = user_codes[chat_id]
-        if text == saved["code"]:
-            await update.message.reply_text("✅ Verified! Welcome to The Growth Plugin. You now have access!")
-            del user_codes[chat_id]
-        else:
-            await update.message.reply_text("❌ Wrong code. Try again.")
-        return
-
-    # Otherwise treat text as phone number
-    phone = text
-    if not phone.startswith("+"):
-        await update.message.reply_text("Please include country code. Example: +2348012345678")
-        return
-
-    code = str(random.randint(100000, 999999))
-    user_codes[chat_id] = {"code": code, "phone": phone}
-
-    url = "https://api.ng.termii.com/api/sms/send"
-    data = {
-        "api_key": TERMII_KEY,
-        "to": phone,
-        "from": "GrowthPlug",
-        "sms": f"Your Growth Plugin code is: {code}. Valid for 5 minutes.",
-        "type": "plain",
-        "channel": "generic"
-    }
-
-    try:
-        r = requests.post(url, json=data)
-        if r.status_code == 200:
-            await update.message.reply_text(f"📱 Code sent to {phone}! Please enter the 6-digit code.")
-        else:
-            await update.message.reply_text(f"Failed to send SMS: {r.text}")
-    except Exception as e:
-        await update.message.reply_text(f"Error: {e}")
+async def verify(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    code = random.randint(100000, 999999)
+    await update.message.reply_text(f"Your verification code is: {code}")
 
 def main():
-    print("Bot Starting...")
+    # Start Flask in background
     threading.Thread(target=run_flask, daemon=True).start()
-    app = Application.builder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    print("Polling...")
-    app.run_polling()
+    
+    # Start Bot
+    application = Application.builder().token(BOT_TOKEN).build()
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_cmd))
+    application.add_handler(CommandHandler("verify", verify))
+    
+    print("Bot is polling...")
+    application.run_polling()
 
 if __name__ == "__main__":
     main()
