@@ -1,6 +1,8 @@
 import os
 import logging
 import requests
+import threading
+from flask import Flask
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
@@ -17,6 +19,16 @@ logging.basicConfig(level=logging.INFO)
 # Simple memory for codes
 user_codes = {}
 
+# Tiny web server to keep Render alive
+flask_app = Flask(__name__)
+@flask_app.route('/')
+def home():
+    return "Bot is running!"
+
+def run_flask():
+    port = int(os.environ.get("PORT", 10000))
+    flask_app.run(host="0.0.0.0", port=port)
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Welcome to The Growth Plugin Bot!\nSend your phone number with country code, e.g. +2348012345678")
 
@@ -24,7 +36,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     phone = update.message.text.strip()
     chat_id = update.effective_chat.id
     
-    # If user is sending OTP to verify
     if chat_id in user_codes:
         saved = user_codes[chat_id]
         if phone == saved["code"]:
@@ -34,7 +45,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ Wrong code. Try again.")
         return
 
-    # Send OTP via Termii
     import random
     code = str(random.randint(100000, 999999))
     user_codes[chat_id] = {"code": code, "phone": phone}
@@ -65,6 +75,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     print("Bot starting...")
+    # Start web server in background
+    threading.Thread(target=run_flask, daemon=True).start()
+    
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
