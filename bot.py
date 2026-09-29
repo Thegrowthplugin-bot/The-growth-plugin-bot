@@ -1,48 +1,38 @@
+import os
 import telebot
-import re
+from flask import Flask
+import threading
 
-BOT_TOKEN = "PUT_YOUR_BOT_TOKEN_HERE"
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
+app = Flask(__name__)
 
-# Welcome message
+@app.route('/')
+def home():
+    return "Bot is Live!"
+
 @bot.message_handler(commands=['start'])
 def start(message):
-    bot.reply_to(message, 
-        "🔥 Welcome to The Growth Plugin! 🔌\n\n"
-        "Send me ANY link and I'll save it for review:\n"
-        "✅ TikTok\n"
-        "✅ Instagram Reels / Posts\n"
-        "✅ YouTube\n"
-        "✅ Facebook\n\n"
-        "Just paste the link here 👇"
-    )
+    bot.reply_to(message, "🔥 Welcome to The Growth Plugin! 🔌\n\nSend me ANY link and I'll save it for review:\n✅ TikTok\n✅ Instagram Reels / Posts\n✅ YouTube\n✅ Facebook\n\nJust paste the link here 👇")
 
-# Accept ALL links
 @bot.message_handler(func=lambda m: True)
 def handle_all(message):
     text = message.text
-    
-    # Check if it contains a link
-    if "http" not in text and "tiktok.com" not in text and "instagram.com" not in text and "youtu" not in text and "facebook.com" not in text and "fb.watch" not in text:
-        bot.reply_to(message, "Please send a valid link.\nExample:\nhttps://www.tiktok.com/@user/video/123\nor\nhttps://www.instagram.com/reel/...")
+    if "http" not in text:
+        bot.reply_to(message, "Please send a valid link.")
         return
-
-    # Detect platform
-    platform = "Unknown"
+    platform = "Link"
     if "tiktok.com" in text: platform = "TikTok"
     elif "instagram.com" in text: platform = "Instagram"
     elif "youtu" in text: platform = "YouTube"
     elif "facebook.com" in text or "fb.watch" in text: platform = "Facebook"
+    print(f"New Order: {platform} - {text}")
+    bot.reply_to(message, f"✅ {platform} Link Received!\n\n{text}\n\nSaved for review. Check: @Thegrowthplug_in")
 
-    # Save it (you will see it in logs)
-    print(f"New Order: {platform} - {text} - From: @{message.from_user.username}")
+def run_bot():
+    bot.infinity_polling()
 
-    bot.reply_to(message, 
-        f"✅ {platform} Link Received!\n\n"
-        f"{text}\n\n"
-        f"Saved for review. Our team will deliver your growth shortly.\n"
-        f"Check our channel: @Thegrowthplug_in\n"
-        f"Need help? Order here: https://thegrowthplugin.bumpa.shop/"
-    )
+threading.Thread(target=run_bot).start()
 
-bot.polling()
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
