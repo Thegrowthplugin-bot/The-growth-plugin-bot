@@ -1,50 +1,48 @@
-import os
 import telebot
-from flask import Flask, request
-import threading
+import re
 
-BOT_TOKEN = os.getenv("BOT_TOKEN") or os.getenv("TELEGRAM_BOT_TOKEN")
+BOT_TOKEN = "PUT_YOUR_BOT_TOKEN_HERE"
 bot = telebot.TeleBot(BOT_TOKEN)
-app = Flask(__name__)
 
-# Store links (you can later connect to Google Sheet)
-tiktok_links = []
-
+# Welcome message
 @bot.message_handler(commands=['start'])
 def start(message):
-    bot.reply_to(message, "🔥 Welcome to The Growth Plugin!\n\nSend me any TikTok link and I'll save it for review.\n\nJust paste the link here 👇")
+    bot.reply_to(message, 
+        "🔥 Welcome to The Growth Plugin! 🔌\n\n"
+        "Send me ANY link and I'll save it for review:\n"
+        "✅ TikTok\n"
+        "✅ Instagram Reels / Posts\n"
+        "✅ YouTube\n"
+        "✅ Facebook\n\n"
+        "Just paste the link here 👇"
+    )
 
-@bot.message_handler(func=lambda m: 'tiktok.com' in m.text.lower())
-def save_link(message):
-    link = message.text
-    tiktok_links.append({"user": message.from_user.username, "link": link})
-    print(f"New link from @{message.from_user.username}: {link}")
-    bot.reply_to(message, f"✅ Got it! Saved!\n\n{link}\n\nSend another one or type /start")
-
+# Accept ALL links
 @bot.message_handler(func=lambda m: True)
 def handle_all(message):
-    if 'tiktok.com' not in message.text.lower():
-        bot.reply_to(message, "Please send a valid TikTok link. Example:\nhttps://www.tiktok.com/@user/video/123456")
+    text = message.text
+    
+    # Check if it contains a link
+    if "http" not in text and "tiktok.com" not in text and "instagram.com" not in text and "youtu" not in text and "facebook.com" not in text and "fb.watch" not in text:
+        bot.reply_to(message, "Please send a valid link.\nExample:\nhttps://www.tiktok.com/@user/video/123\nor\nhttps://www.instagram.com/reel/...")
+        return
 
-# Flask routes for Render
-@app.route('/')
-def home():
-    return "The Growth Plugin Bot is LIVE!"
+    # Detect platform
+    platform = "Unknown"
+    if "tiktok.com" in text: platform = "TikTok"
+    elif "instagram.com" in text: platform = "Instagram"
+    elif "youtu" in text: platform = "YouTube"
+    elif "facebook.com" in text or "fb.watch" in text: platform = "Facebook"
 
-@app.route(f'/{BOT_TOKEN}', methods=['POST'])
-def webhook():
-    bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
-    return "ok", 200
+    # Save it (you will see it in logs)
+    print(f"New Order: {platform} - {text} - From: @{message.from_user.username}")
 
-def run_bot():
-    # IMPORTANT: Remove webhook and use polling (works best on Render free tier)
-    bot.remove_webhook()
-    print("Bot removed webhook, starting polling...")
-    bot.infinity_polling()
+    bot.reply_to(message, 
+        f"✅ {platform} Link Received!\n\n"
+        f"{text}\n\n"
+        f"Saved for review. Our team will deliver your growth shortly.\n"
+        f"Check our channel: @Thegrowthplug_in\n"
+        f"Need help? Order here: https://thegrowthplugin.bumpa.shop/"
+    )
 
-if __name__ == "__main__":
-    # Start bot in background thread
-    threading.Thread(target=run_bot, daemon=True).start()
-    # Start Flask for Render to keep it Live
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+bot.polling()
